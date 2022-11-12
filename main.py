@@ -5,7 +5,7 @@ import argparse
 from torch.utils.data import DataLoader
 
 from dataset import MyDataset, load_dataset
-from tokenizer import tokenize
+from tokenizer import Tokenizer
 from model import Model
 
 
@@ -18,13 +18,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     texts, labels = load_dataset()
+    T = Tokenizer()
     dataset = MyDataset(texts, labels)
     train_dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
     test_dataloader = DataLoader(dataset, batch_size=1, shuffle=False)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = Model().cuda()
-    criterion = nn.CrossEntropyLoss()
+    model = Model().to(device)
+    criterion = nn.CrossEntropyLoss().to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate, betas=(0.9, 0.98))
 
     for epoch in range(args.num_epoch):
@@ -32,7 +33,7 @@ if __name__ == "__main__":
         train_loss = 0
         correct, count = 0, 0
         for batch_idx, (text, label) in enumerate(train_dataloader):
-            text, label = tokenize(text).to(device), label.to(device)
+            text, label = T.tokenize(text[0]).to(device), label.to(device)
             output = model(text).unsqueeze(0)
             loss = criterion(output, label)
             optimizer.zero_grad()
@@ -43,7 +44,7 @@ if __name__ == "__main__":
             _, preds = torch.max(output, 1)
             count += label.size(0)
             correct = preds.eq(label).sum().item()
-            print (f"[*] Epoch: {epoch} \tStep: {batch_idx}/{len(train_dataloader)}\tTrain accuracy: {round((correct/count)*100, 4)} \tTrain Loss: {round((train_loss/count)*100, 4)}")
+            print (f"[*] Epoch: {epoch} \tStep: {batch_idx}/{len(train_dataloader)}\tTrain accuracy: {round((correct/count), 4)} \tTrain Loss: {round((train_loss/count), 4)}")
         
         # with torch.no_grad():
         #     valid_loss = 0
@@ -57,4 +58,5 @@ if __name__ == "__main__":
 
     torch.save(model.state_dict(), PATH)
 
-    loaded_model = torch.load_state_dict(torch.load(PATH))
+    # model.load_state_dict(torch.load(PATH))
+    # model.eval()
