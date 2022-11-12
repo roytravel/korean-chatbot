@@ -40,16 +40,18 @@ class Tokenizer:
         self.sp.Load('{}.model'.format(SP_MODEL_PATH))
 
     def tokenize(self, text):
-        token = self.sp.EncodeAsPieces(text)
+        # token = self.sp.EncodeAsPieces(text)
         ids = self.sp.EncodeAsIds(text)
         # print("Tokens : {}".format(token))
         # print("Tokens : {}".format(ids))
-
-        while len(ids) < MAX_SEQ_LEN:
-            ids.append(0)
-        
+        ids = self._pad_sequence(ids)
         ids = torch.Tensor(ids)
         return ids
+
+    def _pad_sequence(self, sequence: list) -> list:
+        while len(sequence) < MAX_SEQ_LEN:
+            sequence.append(0)
+        return sequence
 
 
 # if __name__ == "__main__":
