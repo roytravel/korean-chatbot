@@ -1,0 +1,4 @@
+*.pth
+*.yml
+**__pycache__
+*.json
