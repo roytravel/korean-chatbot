@@ -20,19 +20,20 @@ class TestDataset(Dataset):
         return len(self.data)
 
 class General(Dataset):
-    def __init__(self, encodings, labels) -> None:
+    def __init__(self, encodings, label) -> None:
         self.encodings = encodings
-        self.labels = labels
+        self.label = label
 
     def __getitem__(self, index):
         """ 일반적으로 Numpy 배열이나 Tensor 형식으로 반환 + input/output을 튜플 형식으로 반환 """
         #item = {key: torch.tensor(value[index]) for key, value in self.encodings.items()}
-        item = {key: value[index].clone().detach() for key, value in self.encodings.items()}
-        item['labels'] = torch.tensor(self.labels[index])
-        return item
+        encodings = {key: value[index].clone().detach() for key, value in self.encodings.items()}
+        # item['labels'] = torch.tensor(self.labels[index])
+        label = torch.tensor(self.label[index])
+        return encodings, label
     
     def __len__(self):
-        return len(self.labels)
+        return len(self.encodings)
 
 class NSMC(Dataset):
     def __init__(self, encodings, labels) -> None:

@@ -1,6 +1,7 @@
 import datasets
 import numpy as np
 import pandas as pd
+from sklearn.model_selection import train_test_split
 from transformers import AutoTokenizer
 
 MODEL_NAME = "bert-base-multilingual-cased"
@@ -46,15 +47,14 @@ def preprocess_general_dataset():
     
     df['label'] = np.array(df['label'], dtype=np.int64)
     
-    train_label = df['label'][:16000].values
-    test_label = df['label'][16000:].values
+    # 데이터셋 분할 (train, test)
+    # train_data, test_data, train_label, test_label = train_test_split(texts, labels, test_size=0.2, shuffle=False, random_state=521)
+    train_data = df.sample(frac=0.8, random_state=521)
+    test_data = df.drop(train_data.index)
     
-    train_data = df[:16000]
-    test_data = df[16000:]
+    train_label = train_data['label'].values
+    test_label = test_data['label'].values
     
-    train_data = tokenizer(list(train_data['question']), padding=True, truncation=True, 
-                                            add_special_tokens=True, return_tensors="pt")
-    test_data = tokenizer(list(test_data['question']), padding=True, truncation=True,
-                                         add_special_tokens=True, return_tensors="pt")
-    
+    train_data = tokenizer(list(train_data['question']), max_length=128, padding=True, truncation=True, add_special_tokens=True, return_tensors="pt")
+    test_data = tokenizer(list(test_data['question']), max_length=128, padding=True, truncation=True, add_special_tokens=True, return_tensors="pt")
     return train_data, test_data, train_label, test_label

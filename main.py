@@ -2,20 +2,20 @@
 import os
 import argparse
 import torch
-from transformers import Trainer, TrainingArguments
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+from transformers import BertConfig
+from glob import glob
 
-from dataset import NSMC, General
+from dataset import General
 from preprocess.tokenizer import AutoTokenizer
-from preprocess.preprocessor import preprocess_nsmc_dataset, preprocess_general_dataset
+from preprocess.preprocessor import preprocess_general_dataset
 from model.model import BertForSequenceClassification
-from utils.metrics import compute_metrics
-from predict import Predict
 
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+torch.cuda.empty_cache()
 
-MODEL_FILE_PATH = "./test.pth"
-CHECKPOINT_FILE_PATH = "data/checkpoint/"
+CHECKPOINT_FILE_PATH = "data/output/"
 MODEL_NAME = "bert-base-multilingual-cased"
 MODEL_PATH = "./data/output/model.pth"
 
@@ -33,46 +33,73 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     seed = torch.manual_seed(args.seed)
-    #device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    device = torch.device("cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
    
     # 2. 토크나이저 로딩
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
     
     # 3. 데이터셋 로딩
-    # train_data, test_data, train_label, test_label = preprocess_nsmc_dataset()
-    # train_dataset = NSMC(train_data, train_label)
-    # test_dataset = NSMC(test_data, test_label)
-    
     train_data, test_data, train_label, test_label = preprocess_general_dataset()
     train_dataset = General(train_data, train_label)
     test_dataset = General(test_data, test_label)
     
-    # 4. 학습 인자 설정
-    training_args = TrainingArguments(
-    output_dir='./data/output',
-    num_train_epochs=3,
-    per_device_train_batch_size=args.batch_size,
-    per_device_eval_batch_size=64,
-    warmup_steps=500,
-    weight_decay=0.01,
-    logging_dir='./data/logs',
-    logging_steps=500,
-    save_steps=500,
-    save_total_limit=3
-    )
+    # 4. 모델 로드
+    f = glob(CHECKPOINT_FILE_PATH + "checkpoint-1500/pytorch_model.bin")
+    if f:
+        config = BertConfig.from_json_file('./data/output/checkpoint-1500/config.json')
+        model = BertForSequenceClassification.from_pretrained(f[0], config=config).to(device)
+    else:
+        model = BertForSequenceClassification.from_pretrained(MODEL_NAME, num_labels=4).to(device)
     
-    # 5. 모델 로드
-    model = BertForSequenceClassification.from_pretrained(MODEL_NAME, num_labels=4).to(device)
+    # 5. 모델 하이퍼파라미터 설정
+    criterion = torch.nn.CrossEntropyLoss().to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate, betas=(0.9, 0.98))
+    lr_scheduler = ReduceLROnPlateau(optimizer=optimizer, factor=0.1, verbose=True, patience=3)
 
-    # 6. 학습
-    trainer = Trainer(model=model, args=training_args, train_dataset=train_dataset)
-    trainer.train()
-    
-    # 7. 평가
-    trainer = Trainer(model=model,args=training_args, compute_metrics=compute_metrics)
-    trainer.evaluate(eval_dataset=test_dataset)
-    
-    # 8. 추론
-    P = Predict()    
-    print(P.predict_intent("아 여행 가고 싶다 서울 여행지 추천해줘!"))
+    # 6. 학습 & 평가
+    for epoch in range(args.num_epoch):
+        model.train()
+        train_loss = 0
+        correct, count = 0, 0
+        for train_idx, (text, label) in enumerate(train_dataset):
+            input_ids = text['input_ids'].unsqueeze(0).to(device)
+            attention_mask = text['attention_mask'].unsqueeze(0).to(device)
+            token_type_ids = text['token_type_ids'].unsqueeze(0).to(device)
+            label = label.unsqueeze(0).to(device)
+            outputs = model(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
+            loss = criterion(outputs[0], label)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            train_loss += loss.item()
+            _, preds = torch.max(outputs[0], dim=1)
+            
+            count += label.size(0)
+            correct = preds.eq(label).sum().item()
+            accuracy = round((correct/count), 4)
+            train_losss = round((train_loss/count), 4)
+            if train_idx % 10 == 0:
+                print (f"[*] Epoch: {epoch} \t Step: {train_idx}/{len(train_label)}\t train accuracy: {accuracy} \t train loss: {train_losss}")
+        
+        # model.eval()
+        # valid_loss = 0
+        # correct, count = 0, 0
+        # with torch.no_grad():    
+        #     for valid_idx, (text, label) in enumerate(test_dataset):
+        #         input_ids = text['input_ids'].unsqueeze(0)
+        #         attention_mask = text['attention_mask'].unsqueeze(0)
+        #         token_type_ids = text['token_type_ids'].unsqueeze(0)
+        #         label = label.unsqueeze(0)
+        #         outputs = model(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
+        #         loss = criterion(outputs[0], label)
+        #         valid_loss += loss.item()
+        #         _, preds = torch.max(outputs[0], dim=1)
+        #         count += label.size(0)
+        #         correct = preds.eq(label).sum().item()
+        #         accuracy = round((correct/count), 4)
+        #         valid_losss = round((valid_loss/count), 4)
+        #         break
+        #         if valid_idx % 100 == 0:
+        #             print (f"[*] Epoch: {epoch} \t Step: {valid_idx}/{len(test_label)} valid accuracy: {accuracy} \t valid loss: {valid_losss}")
+        
+        # lr_scheduler.step(metrics=valid_loss)
