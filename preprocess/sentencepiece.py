@@ -34,7 +34,7 @@ class SentencePiece:
         print("Tokens : {}".format(ids))
 
 
-class Tokenizer:
+class SPTokenizer:
     def __init__(self):
         self.sp = spm.SentencePieceProcessor()
         self.sp.Load('{}.model'.format(SP_MODEL_PATH))
@@ -52,9 +52,3 @@ class Tokenizer:
         while len(sequence) < MAX_SEQ_LEN:
             sequence.append(0)
         return sequence
-
-
-# if __name__ == "__main__":
-#     SP = SentencePiece()
-#     SP.create_vocab_by_spm()
-#     SP._test_spm_tokenizer()
