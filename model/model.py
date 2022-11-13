@@ -1,5 +1,12 @@
 from torch import Tensor
 import torch.nn as nn
+from transformers import BertForSequenceClassification
+
+class BertForSequenceClassification(BertForSequenceClassification):
+    """ BertForSequenceClassification Wrapper 클래스 """
+    def __init__(self, config):
+        super().__init__(config)
+
 
 class Model(nn.Module):
     """ 테스트용 분류 모델 """
@@ -18,43 +25,26 @@ class Model(nn.Module):
         x = self.fc3(x)
         return x
 
+
 class Convolution(nn.Module):
-    def __init__(self, in_channel: int, out_channel: int, kernel_size: int, residual: bool) -> None:
+    def __init__(self, in_channel: int, out_channel: int, kernel_size: int, residual: bool, num_classes: int) -> None:
         super(Convolution, self).__init__()
-        self.conv = nn.Conv1d(in_channels=in_channel, out_channels=out_channel, kernel_size=kernel_size, padding=kernel_size//2)
-        self.norm = nn.BatchNorm1d(out_channel)
-        self.relu = nn.ReLU()
-        
-        self.conv2 = nn.Conv2d(in_channels=out_channel, out_channels=4, kernel_size=1, padding=kernel_size//2)
-        self.norm2 = nn.BatchNorm1d(out_channel)
-        self.residual = residual
     
     def forward(self, x: Tensor) -> Tensor:
-        _x = x
-        x = self.conv(x)
-        x = self.norm(x)
-        x = self.relu(x)
-        x = self.conv2(x)
-        x = self.norm2(x)
-        return _x + x if self.residual else x
-
+        pass
+    
+    
 class LSTM(nn.Module):
     def __init__(self) -> None:
         super(LSTM, self).__init__()
     
-    def forawrd(self):
+    def forawrd(self, x: Tensor) -> Tensor:
         pass
+
 
 class RNN(nn.Module):
     def __init__(self) -> None:
         super(RNN, self).__init__()
-    
-    def forward(self):
-        pass
-
-class KoBERT(nn.Module):
-    def __init__(self) -> None:
-        super(KoBERT, self).__init__()
-
-    def forward(self):
+        
+    def forward(self, x: Tensor) -> Tensor:
         pass

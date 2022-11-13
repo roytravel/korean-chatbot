@@ -1,5 +1,7 @@
 import json
 import pandas as pd
+import datasets
+import torch
 from torch.utils.data import Dataset
 
 class TestDataset(Dataset):
@@ -27,3 +29,16 @@ class GeneralDataset(Dataset):
     
     def __len__(self):
         return len(self.df)
+
+class NSMC(Dataset):
+    def __init__(self, encodings, labels) -> None:
+        self.encodings = encodings
+        self.labels = labels
+
+    def __getitem__(self, index):
+        item = {key: torch.tensor(value[index]) for key, value in self.encodings.items()}
+        item['labels'] = torch.tensor(self.labels[index])
+        return item
+    
+    def __len__(self):
+        return len(self.labels)
