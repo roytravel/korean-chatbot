@@ -35,3 +35,26 @@ def preprocess_nsmc_dataset():
                                          add_special_tokens=True, return_tensors="pt")
     
     return train_data, test_data, train_label, test_label
+
+def preprocess_general_dataset():
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+    df = pd.read_csv('./data/intent_data.csv')
+    df['label'] = df['label'].replace('weather', 0)
+    df['label'] = df['label'].replace('dust', 1)
+    df['label'] = df['label'].replace('travel', 2)
+    df['label'] = df['label'].replace('restaurant', 3)
+    
+    df['label'] = np.array(df['label'], dtype=np.int64)
+    
+    train_label = df['label'][:16000].values
+    test_label = df['label'][16000:].values
+    
+    train_data = df[:16000]
+    test_data = df[16000:]
+    
+    train_data = tokenizer(list(train_data['question']), padding=True, truncation=True, 
+                                            add_special_tokens=True, return_tensors="pt")
+    test_data = tokenizer(list(test_data['question']), padding=True, truncation=True,
+                                         add_special_tokens=True, return_tensors="pt")
+    
+    return train_data, test_data, train_label, test_label

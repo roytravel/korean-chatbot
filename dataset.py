@@ -19,16 +19,20 @@ class TestDataset(Dataset):
         """ 데이터셋 개수 반환 """
         return len(self.data)
 
-class GeneralDataset(Dataset):
-    def __init__(self) -> None:
-        self.LABEL = {'weather':0, 'dust':1, 'travel':2, 'restaurant':3}
-        self.df = pd.read_csv('data/intent_data.csv', encoding='utf-8')
-    
+class General(Dataset):
+    def __init__(self, encodings, labels) -> None:
+        self.encodings = encodings
+        self.labels = labels
+
     def __getitem__(self, index):
-        return self.df['question'][index], self.LABEL[self.df['label'][index]]
+        """ 일반적으로 Numpy 배열이나 Tensor 형식으로 반환 + input/output을 튜플 형식으로 반환 """
+        #item = {key: torch.tensor(value[index]) for key, value in self.encodings.items()}
+        item = {key: value[index].clone().detach() for key, value in self.encodings.items()}
+        item['labels'] = torch.tensor(self.labels[index])
+        return item
     
     def __len__(self):
-        return len(self.df)
+        return len(self.labels)
 
 class NSMC(Dataset):
     def __init__(self, encodings, labels) -> None:
@@ -36,6 +40,7 @@ class NSMC(Dataset):
         self.labels = labels
 
     def __getitem__(self, index):
+        """ 일반적으로 Numpy 배열이나 Tensor 형식으로 반환 + input/output을 튜플 형식으로 반환 """
         item = {key: torch.tensor(value[index]) for key, value in self.encodings.items()}
         item['labels'] = torch.tensor(self.labels[index])
         return item
