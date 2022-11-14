@@ -1,4 +1,6 @@
 import requests
+from collections import namedtuple
+from typing import Text, List, Dict, Any
 from events import Slotset
 from bs4 import BeautifulSoup
 
