@@ -1,10 +1,6 @@
+from datetime import datetime
 from flask import Flask, jsonify, request
 from predict import Predict
-
-text = "아 배고프다 오늘 날씨에 따라 밥 뭐먹을지 골라야징"
-# text = "아 여행가고 싶다 서울 여행지 추천해줘"
-# text = "아 식당 어디 가지 배고픈데 결정하기 어려워."
-# text = "미세먼지 심해?"
 
 LABEL = {
     0: 'weather',
@@ -13,13 +9,21 @@ LABEL = {
     3: 'restaurant'
 }
 
+def query_logging(current, ip, intent, query):
+    """ 현재 시간, 사용자 IP, 쿼리, 의도 분류 결과 로그 수집 """
+    with open('./data/log/query.log', mode='a+', encoding='utf-8') as f:
+        f.writelines(' '.join([current, ip, intent, query, '\n']))
+
 app = Flask(__name__)
 @app.route('/', methods=['GET', 'POST'])
 def hello_world():
     if request.method == "GET":
-        query = request.args['query']
-        intent = P.predict_intent(query)
-        return LABEL[intent]
+        current = str(datetime.utcnow())
+        ip      = request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
+        query   = request.args['query']
+        intent  = LABEL[P.predict_intent(query)]        
+        query_logging(current, ip, intent, query)
+        return intent
     else:
         query = request.form['query']
         intent = P.predict_intent(query)
