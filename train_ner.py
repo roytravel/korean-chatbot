@@ -4,8 +4,9 @@ import torch
 from tqdm import tqdm, trange
 
 from model.model import BertForSequenceClassification
-from preprocess.tokenizer import BertTokenizer, AutoTokenizer
+from utils.data.tokenizer import BertTokenizer, AutoTokenizer
 from preprocess.preprocessor import preprocess_ner_dataset
+from utils.data import Dataset
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -25,11 +26,12 @@ if __name__ == "__main__":
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
     
-    train, test = preprocess_ner_dataset()
+    dataset = Dataset()
+    train_dataset, test_dataset = dataset.bring_entity()
 
     MODEL_NAME = "bert-base-multilingual-cased"
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-    model = BertForSequenceClassification.from_pretrained(MODEL_NAME, num_labels=17).to(device)
+    model = BertForSequenceClassification.from_pretrained(MODEL_NAME, num_labels=15).to(device)
 
     criterion = torch.nn.CrossEntropyLoss().to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate, eps=1e-8)
@@ -39,7 +41,7 @@ if __name__ == "__main__":
         model.train()
         train_loss = 0
         correct, count = 0, 0
-        for train_idx, (text, label) in enumerate(train):
+        for train_idx, (text, label) in enumerate(tqdm(train_dataset)):
             input_ids = text['input_ids'].to(device)
             attention_mask = text['attention_mask'].to(device)
             token_type_ids = text['token_type_ids'].to(device)
@@ -56,7 +58,7 @@ if __name__ == "__main__":
             accuracy = round((correct/count), 4)
             train_losss = round((train_loss/count), 4)
             if train_idx % 10 == 0:
-                print (f"[*] Epoch: {epoch} \t Step: {train_idx}/{len(train)}\t train accuracy: {accuracy} \t train loss: {train_losss}")
+                print (f"[*] Epoch: {epoch} \t Step: {train_idx}/{len(train_dataset)}\t train accuracy: {accuracy} \t train loss: {train_losss}")
 
     # model.eval()
     # for epoch in trange(args.num_epochs):

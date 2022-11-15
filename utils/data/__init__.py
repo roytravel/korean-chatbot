@@ -6,7 +6,14 @@ from utils.data.dataloader import (
     DataLoader,
 )
 
+from utils.data.tokenizer import (
+    AutoTokenizer,
+    BertTokenizer,
+)
+
 __all__ = [
+    'AutoTokenizer',
+    'BertTokenizer',
     'DataLoader',
     'Dataset',
     ]

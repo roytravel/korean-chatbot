@@ -7,7 +7,7 @@ from transformers import BertConfig
 from glob import glob
 
 from dataset import General
-from preprocess.tokenizer import AutoTokenizer
+from utils.data.tokenizer import AutoTokenizer
 from preprocess.preprocessor import preprocess_general_dataset
 from model.model import BertForSequenceClassification
 

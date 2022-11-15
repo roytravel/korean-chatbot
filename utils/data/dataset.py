@@ -1,10 +1,8 @@
-import logging
 import random
 import pandas as pd
 import torch
 from torch import Tensor
-from typing import Tuple, List, Dict
-
+from typing import Tuple, List
 from utils.decorators import data
 from utils.data.tokenizer import AutoTokenizer
 
@@ -62,7 +60,7 @@ class Dataset:
         return train_dataset, test_dataset
     
     def __make_label_dict(self, label):
-        """ 전체 라벨을 구하고 고유 인덱스 부여 예: {'B-DATE':1, 'B-LOCATION':2, ...} """
+        """ 전체 라벨을 구하고 고유 인덱스 부여 예: {''B-DATE':0, 'B-LOCATION':1, ...} """
         label_set, label_dict = set(), dict()
         [[label_set.add(t) for t in tag.split(' ')] for tag in label]
         label_set = sorted(list(label_set))

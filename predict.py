@@ -18,7 +18,6 @@ class Predict:
         # tokenized_sentnece.to(self.device)
         
         with torch.no_grad():
-            print (tokenized_sentnece['input_ids'].shape, tokenized_sentnece['attention_mask'].shape, tokenized_sentnece['token_type_ids'].shape)
             outputs = self.model(input_ids=tokenized_sentnece['input_ids'],
                             attention_mask=tokenized_sentnece['attention_mask'],
                             token_type_ids=tokenized_sentnece['token_type_ids'])
