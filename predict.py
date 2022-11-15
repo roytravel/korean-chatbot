@@ -15,7 +15,6 @@ class Predict:
     def predict_intent(self, sentence):
         self.model.eval()
         tokenized_sentnece = self.tokenizer(sentence, max_length=128, truncation=True, add_special_tokens=True, return_tensors="pt")
-        # tokenized_sentnece.to(self.device)
         
         with torch.no_grad():
             outputs = self.model(input_ids=tokenized_sentnece['input_ids'],

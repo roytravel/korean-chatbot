@@ -2,10 +2,6 @@ from utils.data.dataset import (
     Dataset,
 )
 
-from utils.data.dataloader import (
-    DataLoader,
-)
-
 from utils.data.tokenizer import (
     AutoTokenizer,
     BertTokenizer,
@@ -14,7 +10,6 @@ from utils.data.tokenizer import (
 __all__ = [
     'AutoTokenizer',
     'BertTokenizer',
-    'DataLoader',
     'Dataset',
     ]
 

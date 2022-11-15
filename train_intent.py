@@ -5,8 +5,10 @@ import torch
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from transformers import BertConfig
 from glob import glob
+from tqdm import tqdm
 
 from dataset import General
+from utils.data import Dataset
 from utils.data.tokenizer import AutoTokenizer
 from preprocess.preprocessor import preprocess_general_dataset
 from model.model import BertForSequenceClassification
@@ -35,28 +37,28 @@ if __name__ == "__main__":
     seed = torch.manual_seed(args.seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
    
-    # 2. 토크나이저 로딩
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+    # 2. 데이터셋 로딩
+    # train_data, test_data, train_label, test_label = preprocess_general_dataset()
+    # train_dataset = General(train_data, train_label)
+    # test_dataset = General(test_data, test_label)
     
-    # 3. 데이터셋 로딩
-    train_data, test_data, train_label, test_label = preprocess_general_dataset()
-    train_dataset = General(train_data, train_label)
-    test_dataset = General(test_data, test_label)
+    D = Dataset()
+    train_dataset, test_dataset = D.bring_intent()
     
-    # 4. 모델 로드
+    # 3. 모델 로드
     f = glob(CHECKPOINT_FILE_PATH + "checkpoint-1500/pytorch_model.bin")
     if f:
         config = BertConfig.from_json_file('./data/output/checkpoint-1500/config.json')
         model = BertForSequenceClassification.from_pretrained(f[0], config=config).to(device)
     else:
-        model = BertForSequenceClassification.from_pretrained(MODEL_NAME, num_labels=4).to(device)
+        model = BertForSequenceClassification.from_pretrained(MODEL_NAME, num_labels=args.num_classes).to(device)
     
-    # 5. 모델 하이퍼파라미터 설정
+    # 4. 모델 하이퍼파라미터 설정
     criterion = torch.nn.CrossEntropyLoss().to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate, betas=(0.9, 0.98))
     lr_scheduler = ReduceLROnPlateau(optimizer=optimizer, factor=0.1, verbose=True, patience=3)
 
-    # 6. 학습 & 평가
+    # 5. 학습 & 평가
     for epoch in range(args.num_epoch):
         model.train()
         train_loss = 0
@@ -65,8 +67,14 @@ if __name__ == "__main__":
             input_ids = text['input_ids'].unsqueeze(0).to(device)
             attention_mask = text['attention_mask'].unsqueeze(0).to(device)
             token_type_ids = text['token_type_ids'].unsqueeze(0).to(device)
-            label = label.unsqueeze(0).to(device)
-            outputs = model(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
+            label = label.unsqueeze(0).to(device) # torch.tensor([3], device='cuda:0')
+            outputs = model(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids) 
+            # outpouts[0] : torch.Size([5, 4])
+            print (text['input_ids'].shape)
+            print (text['attention_mask'].shape)
+            print (text['token_type_ids'].shape)
+            print (label.shape)
+            print (outputs)
             loss = criterion(outputs[0], label)
             optimizer.zero_grad()
             loss.backward()
@@ -78,8 +86,8 @@ if __name__ == "__main__":
             correct = preds.eq(label).sum().item()
             accuracy = round((correct/count), 4)
             train_losss = round((train_loss/count), 4)
-            if train_idx % 10 == 0:
-                print (f"[*] Epoch: {epoch} \t Step: {train_idx}/{len(train_label)}\t train accuracy: {accuracy} \t train loss: {train_losss}")
+            # if train_idx % 10 == 0:
+                # print (f"[*] Epoch: {epoch} \t Step: {train_idx}/{len({???})}\t train accuracy: {accuracy} \t train loss: {train_losss}")
         
         # model.eval()
         # valid_loss = 0
