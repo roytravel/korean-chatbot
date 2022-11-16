@@ -1,25 +1,25 @@
 import torch
 import numpy as np
+from utils.decorators import data
 from transformers import AutoTokenizer
 from transformers import BertConfig, BertForSequenceClassification
 
+@data
 class Predict:
     def __init__(self) -> None:
-        MODEL_NAME = "bert-base-multilingual-cased"
-        self.tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+        self.tokenizer = AutoTokenizer.from_pretrained(self.MODEL_NAME)
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        config = BertConfig.from_json_file('./data/output/checkpoint-1500/config.json')
-        self.model = BertForSequenceClassification.from_pretrained('./data/output/checkpoint-1500/pytorch_model.bin', config=config)
-        # model = torch.load('./data/output/model.pth')
+        config = BertConfig.from_json_file(self.OUTPUT_DIR+self.CONFIG)
+        self.model = BertForSequenceClassification.from_pretrained(self.OUTPUT_DIR+self.MODEL_FILE_NAME, config=config)
         
     def predict_intent(self, sentence):
-        self.model.eval()
-        tokenized_sentnece = self.tokenizer(sentence, max_length=128, truncation=True, add_special_tokens=True, return_tensors="pt")
+        input = self.tokenizer(sentence, max_length=128, truncation=True, add_special_tokens=True, return_tensors="pt")
         
+        self.model.eval()
         with torch.no_grad():
-            outputs = self.model(input_ids=tokenized_sentnece['input_ids'],
-                            attention_mask=tokenized_sentnece['attention_mask'],
-                            token_type_ids=tokenized_sentnece['token_type_ids'])
+            outputs = self.model(input_ids=input['input_ids'],
+                            attention_mask=input['attention_mask'],
+                            token_type_ids=input['token_type_ids'])
         logits = outputs[0]
         logits = logits.detach().cpu().numpy()
         intent = np.argmax(logits)

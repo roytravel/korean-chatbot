@@ -12,7 +12,7 @@ class Dataset:
     def __init__(self):
         self.tokenizer = AutoTokenizer.from_pretrained(self.MODEL_NAME)
 
-    def bring_intent(self) -> Tuple[Tensor, Tensor]:
+    def bring_intent(self) -> Tuple[DataLoader, DataLoader]:
         """ intent 분류 모델 학습을 위해 문장과 라벨 가져오기. """
         self.intent_df = pd.read_csv(self.INTENT_FILE)
         sequences = self.__bring_intent_sequence()
@@ -27,7 +27,7 @@ class Dataset:
         test_dataset = self.__make_batch(test_dataset)
         return train_dataset, test_dataset
         
-    def __bring_intent_sequence(self):
+    def __bring_intent_sequence(self) -> pd.DataFrame:
         sequences = self.intent_df['question']
         return sequences
     
@@ -62,8 +62,8 @@ class Dataset:
 
         train_dataset, test_dataset = self.__split_dataset(sequences, labels)
         
-        train_dataset = self.__tensorize_entity(train_dataset, intent=True)
-        test_dataset = self.__tensorize_entity(test_dataset, intent=True)
+        train_dataset = self.__tensorize_entity(train_dataset)
+        test_dataset = self.__tensorize_entity(test_dataset)
         
         train_dataset = self.__make_batch(train_dataset)
         test_dataset = self.__make_batch(test_dataset)
@@ -119,7 +119,7 @@ class Dataset:
         return dataset
     
     def __make_batch(self, dataset) -> DataLoader:
-        dataset = DataLoader(dataset, batch_size=self.BATCH_SIZE, shuffle=False, drop_last=True, pin_memory=True, collate_fn=self.__collate_fn)
+        dataset = DataLoader(dataset, batch_size=self.BATCH_SIZE, shuffle=True, drop_last=False, pin_memory=True, collate_fn=self.__collate_fn)
         return dataset
         
     def __collate_fn(self, batch):
