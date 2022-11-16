@@ -20,26 +20,39 @@ class Dataset:
         
         train_dataset, test_dataset = self.__split_dataset(sequences, labels)
         
-        train_dataset = self.__list_to_tensor(train_dataset)
-        test_dataset = self.__list_to_tensor(test_dataset)
-
-        # train_dataset = self.__make_batch(train_dataset)
-        # test_dataset = self.__make_batch(test_dataset)
+        train_dataset = self.__tensorize_intent(train_dataset)
+        test_dataset = self.__tensorize_intent(test_dataset)
+        
+        train_dataset = self.__make_batch(train_dataset)
+        test_dataset = self.__make_batch(test_dataset)
         return train_dataset, test_dataset
         
     def __bring_intent_sequence(self):
-        """ 토큰화 """
-        sequence = self.intent_df['question']
-        sequence = [seq.split() for seq in sequence]
-        return sequence
+        sequences = self.intent_df['question']
+        return sequences
     
     def __bring_intent_label(self):
-        self.intent_df['label'] = self.intent_df['label'].replace('weather', 1)
-        self.intent_df['label'] = self.intent_df['label'].replace('dust', 2)
-        self.intent_df['label'] = self.intent_df['label'].replace('travel', 3)
-        self.intent_df['label'] = self.intent_df['label'].replace('restaurant', 4)
+        self.intent_df['label'] = self.intent_df['label'].replace('weather', 0)
+        self.intent_df['label'] = self.intent_df['label'].replace('dust', 1)
+        self.intent_df['label'] = self.intent_df['label'].replace('travel', 2)
+        self.intent_df['label'] = self.intent_df['label'].replace('restaurant', 3)
         label = self.intent_df['label'].values
         return label
+    
+    def __tensorize_intent(self, dataset) -> Tuple[Tensor, Tensor]:
+        """ 문장과 라벨 텐서화 """
+        sequence, label = zip(*dataset)
+        label = list(label)
+        sequences = []
+        for seq in sequence:
+            sequences.append([seq])
+        
+        for i in range(len(label)):
+            sequences[i] = self.tokenizer(sequences[i], max_length=self.MAX_LENGTH, padding="max_length", truncation=True, return_tensors="pt")
+            label[i] = torch.tensor(label[i])
+        
+        dataset = list(zip(sequences, label))
+        return dataset
     
     def bring_entity(self) -> Tuple[Tensor, Tensor]:
         """ entity 식별 모델 학습을 위해 문장과 라벨 가져오기. """
@@ -48,9 +61,9 @@ class Dataset:
         labels = self.__bring_entity_label()
 
         train_dataset, test_dataset = self.__split_dataset(sequences, labels)
-
-        train_dataset = self.__list_to_tensor(train_dataset)
-        test_dataset = self.__list_to_tensor(test_dataset)
+        
+        train_dataset = self.__tensorize_entity(train_dataset, intent=True)
+        test_dataset = self.__tensorize_entity(test_dataset, intent=True)
         
         train_dataset = self.__make_batch(train_dataset)
         test_dataset = self.__make_batch(test_dataset)
@@ -93,7 +106,7 @@ class Dataset:
         labels = [[label_dict[t] for t in lb.split()] for lb in label]
         return labels
     
-    def __list_to_tensor(self, dataset) -> Tuple[Tensor, Tensor]:
+    def __tensorize_entity(self, dataset) -> Tuple[Tensor, Tensor]:
         """ 문장과 라벨 텐서화 """
         sequence, label = zip(*dataset)
         label, sequence = list(label), list(sequence)
