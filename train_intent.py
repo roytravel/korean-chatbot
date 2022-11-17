@@ -1,4 +1,3 @@
-# -*- coding:utf-8 -*-
 import os
 import numpy as np
 import argparse
@@ -14,12 +13,11 @@ os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 torch.cuda.empty_cache()
 
-OUTPUT_DIR = "data/output/"
-MODEL_NAME = "bert-base-multilingual-cased"
-
 if __name__ == "__main__":
     # 1. 하이퍼 파라미터 설정
     parser = argparse.ArgumentParser()
+    parser.add_argument('--output_dir', type=str, default="data/output/intent/")
+    parser.add_argument('--model_name', type=str, default="bert-base-multilingual-cased")
     parser.add_argument("--num_epochs", type=int, default=100)
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--learning_rate", type=float, default=2e-5)
@@ -49,14 +47,12 @@ if __name__ == "__main__":
     train_dataloader, test_dataloader = D.bring_intent()
     
     # 4. 모델 로드 
-    model = BertForSequenceClassification.from_pretrained(MODEL_NAME, num_labels=args.num_classes).to(device)
+    model = BertForSequenceClassification.from_pretrained(args.model_name, num_labels=args.num_classes).to(device)
     
     # 5. 학습 하이퍼파라미터 설정
     criterion = torch.nn.CrossEntropyLoss().to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate, betas=(args.beta1, args.beta2), eps=args.eps)
     scheduler = get_linear_schedule_with_warmup(optimizer=optimizer, num_training_steps=args.num_training_steps, num_warmup_steps=args.num_warmup_steps)
-    
-    total_steps = len(train_dataloader) * args.num_epochs
     
     # 6. 학습 & 평가
     ES = EarlyStopping(patience=args.patience)
@@ -105,8 +101,8 @@ if __name__ == "__main__":
             break
     
     # 7. 모델 저장
-    if not os.path.exists(OUTPUT_DIR):
-        os.makedirs(OUTPUT_DIR)
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
     model_to_save = model.module if hasattr(model, 'module') else model
-    model_to_save.save_pretrained(OUTPUT_DIR)
-    # torch.save(args, os.path.join(OUTPUT_DIR, 'training_args.bin'))
+    model_to_save.save_pretrained(args.output_dir)
+    # torch.save(args, os.path.join(args.output_dir, 'training_args.bin'))

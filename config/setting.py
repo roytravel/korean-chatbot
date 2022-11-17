@@ -14,8 +14,8 @@ DATA = {
     "BATCH_SIZE": 256,
     "MAX_LENGTH": 32,
     
-    "OUTPUT_DIR": f"data{_}output{_}",
+    "INTENT_OUTPUT_DIR": f"data{_}output{_}intent{_}",
+    "ENTITY_OUTPUT_DIR": f"data{_}output{_}entity{_}",
     "CONFIG": f"{_}config.json",
-    "MODEL_FILE_NAME": f"{_}pytorch_model.bin"
-    
+    "MODEL_FILE_NAME": f"{_}pytorch_model.bin",   
 }
