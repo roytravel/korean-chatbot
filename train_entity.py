@@ -1,6 +1,7 @@
 import argparse
 import numpy as np
 import torch
+from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 from transformers import get_linear_schedule_with_warmup
 from model.model import BertForSequenceClassification
@@ -45,6 +46,7 @@ if __name__ == "__main__":
     scheduler = get_linear_schedule_with_warmup(optimizer=optimizer, num_training_steps=args.num_training_steps, num_warmup_steps=args.num_warmup_steps)
     
     ES = EarlyStopping(patience=args.patience)
+    writer = SummaryWriter(args.output_dir)
     for epoch in range(args.num_epochs):
         model.train()
         train_loss, correct, count = 0, 0, 0
@@ -55,6 +57,7 @@ if __name__ == "__main__":
             label = label[0].to(device) # [3]
             outputs = model(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
             loss = criterion(outputs[0], label)
+            writer.add_scalar("loss/train", loss, epoch)
             optimizer.zero_grad()
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0) # prevent exploding gradient.
@@ -92,6 +95,7 @@ if __name__ == "__main__":
     model.save_pretrained(args.output_dir)
     model_to_save = model.module if hasattr(model, 'module') else model
     model_to_save.save_pretrained(args.output_dir)
+    writer.close()
     
     # tokenizer.save_pretrained(args.output_dir)
     # label_map = {i : label for i, label in enumerate(LABELS, start=1)}
