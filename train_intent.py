@@ -2,6 +2,7 @@ import os
 import numpy as np
 import argparse
 import torch
+from torch.utils.tensorboard import SummaryWriter
 from transformers import get_linear_schedule_with_warmup
 from glob import glob
 from tqdm import tqdm
@@ -56,6 +57,7 @@ if __name__ == "__main__":
     
     # 6. 학습 & 평가
     ES = EarlyStopping(patience=args.patience)
+    writer = SummaryWriter(args.output_dir)
     for epoch in range(1, args.num_epochs+1):
         model.train()
         train_loss, correct, count = 0, 0, 0
@@ -66,6 +68,7 @@ if __name__ == "__main__":
             label = label[0].unsqueeze(0).to(device)
             outputs = model(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids) 
             loss = criterion(outputs[0], label)
+            writer.add_scalar("loss/train", loss, epoch)
             optimizer.zero_grad()
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip_grad_norm) # prevent exploding gradient.
@@ -106,3 +109,4 @@ if __name__ == "__main__":
     model_to_save = model.module if hasattr(model, 'module') else model
     model_to_save.save_pretrained(args.output_dir)
     # torch.save(args, os.path.join(args.output_dir, 'training_args.bin'))
+    writer.close()
