@@ -23,7 +23,7 @@ class Predict:
                             token_type_ids=input['token_type_ids'])
         logits = outputs[0]
         logits = logits.detach().cpu().numpy()
-        intent = np.argmax(logits)
+        intent = int(np.argmax(logits))
         return intent
     
     def predict_entity(self, sentence: str) -> list:
@@ -40,4 +40,5 @@ class Predict:
                 logits = logits.detach().cpu().numpy()
                 entity = np.argmax(logits)
                 entities.append(entity)
+        entities = zip(sentence, entities)
         return entities
