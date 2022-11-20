@@ -1,15 +1,19 @@
+import os
+import sys
 from datetime import datetime
 from flask import Flask, jsonify, request
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 from predict import Predict
 from core.action import define_action, trigger_action
 from core.state_tracker import DialogueStateTracker
 from core.agent import Agent
 
+LOG_FILENAME = "../data/log/query.log"
+
 def query_logging(current, ip, intent, query, action_type):
     """ 현재 시간, 사용자 IP, 쿼리, 의도 분류 결과 로그 수집 """
-    with open('./data/log/query.log', mode='a+', encoding='utf-8') as f:
+    with open(LOG_FILENAME, mode='a+', encoding='utf-8') as f:
         f.writelines(' '.join([current, ip, str(intent), query, str(action_type), '\n']))
-
 
 app = Flask(__name__)
 @app.route('/', methods=['GET', 'POST'])
