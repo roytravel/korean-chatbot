@@ -48,3 +48,17 @@ class Weather:
 class News:
     def __init__(self) -> None:
         super().__init__()
+        
+class Translate:
+    def translate_ko_en(text):
+        data = {'text':text, 'source':'ko','target':'en'}
+        client_id = "<Naver Client_ID>"
+        client_secret = "<Naver Client_Secret>"
+        url = "https://openapi.naver.com/v1/papago/n2mt"
+        header = {"X-Naver-Client-Id":client_id,"X-Naver-Client-Secret":client_secret}
+        response = requests.post(url, headers=header, data= data)
+        if response.status_code == 200:
+            translated_text = response.json()
+            return translated_text['message']['result']['translatedText']
+        else:
+            return f'[!] Error: {response.status_code}'
