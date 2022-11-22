@@ -27,7 +27,6 @@ If you want to do inference, then you can run the following script. import Predi
     entity = P.predict_entity(sentence)
 
     print (intent, entity)
-
 ```
 
 ## Server
