@@ -34,19 +34,20 @@ def query_logging(current, ip, intent, query, action_type):
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
 @app.route('/', methods=['GET', 'POST'])
-def hello_world():
+def bot():
     if request.method == "GET":
         current = str(datetime.utcnow())
         ip      = request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
         query   = request.args['query']
+        # message = Translate.translate_ko_en(query)
         intent  = P.predict_intent(query)
-        entity  = P.predict_entity(query)
+        # entity  = P.predict_entity(query)
         # state = DST.fill_slot(intent, entity)
         # action = Agent.predict_next_action(state)
         intent, action_type = define_action(intent)
         message = trigger_action(intent, action_type)
         query_logging(current, ip, intent, query, action_type)
-        return message
+        return jsonify(message)
     
     elif request.method == "POST":
         f = request.files['file']
@@ -57,10 +58,9 @@ def hello_world():
         batch['speech'] = speech
         result = get_prediction(batch)
         query = result['transcription']
-        # intent = P.predict_intent(query)
-        # entity = P.predict_entity(query)
-        # message = trigger_action(intent, action_type)
-        return jsonify({'text': query})
+        intent = P.predict_intent(query)
+        message = trigger_action(intent, action_type)
+        return jsonify(message)
 
 if __name__ == '__main__':
     P = Predict()
