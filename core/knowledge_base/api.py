@@ -1,3 +1,4 @@
+import os
 import requests
 from bs4 import BeautifulSoup
 
@@ -39,7 +40,7 @@ class Weather:
         # category = soup.find(class_="tit").text
         # state = soup.find(class_="level_dsc").text
         
-        message = f"오늘 {location} 날씨 알려드릴게요. {temperature}로 {temperature_state}입니다. {lowest}이며 {highest}입니다. \n 또 오전 {rainfall[0].text}이며 오후 {rainfall[1].text}입니다. {phrase}는 {density}이며 {state}입니다. "
+        message = f"오늘 {location} 날씨 알려드릴게요. {temperature}로 {temperature_state}입니다. {lowest}이며 {highest}입니다. 또 오전 {rainfall[0].text}이며 오후 {rainfall[1].text}입니다. {phrase}는 {density}이며 {state}입니다. "
         return message
 
     def get_weather_OpenWeatherMap(self):
@@ -52,8 +53,8 @@ class News:
 class Translate:
     def translate_ko_en(text):
         data = {'text':text, 'source':'ko','target':'en'}
-        client_id = "<Naver Client_ID>"
-        client_secret = "<Naver Client_Secret>"
+        client_id = os.getenv("CLIENT_ID")
+        client_secret = os.getenv("CLIENT_SECRET")
         url = "https://openapi.naver.com/v1/papago/n2mt"
         header = {"X-Naver-Client-Id":client_id,"X-Naver-Client-Secret":client_secret}
         response = requests.post(url, headers=header, data= data)
