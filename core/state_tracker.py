@@ -11,7 +11,7 @@ class Domain:
         return cls.from_json(cls.read_file(filename))
         
     @classmethod
-    def from_json(cls, jsondata: json.load) -> Tuple[List, List, List, List[Dict[List]], List]:
+    def from_json(cls, jsondata: json.load):
         intents = jsondata['intents']
         entities = jsondata['entities']
         slots = jsondata['slots']

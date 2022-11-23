@@ -1,3 +1,4 @@
+# Reference: https://github.com/ttogle918/AI_practice/tree/main/QA%20task 
 import os
 import gc
 import argparse

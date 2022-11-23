@@ -13,9 +13,11 @@ DATA = {
     "SPLIT_RATIO": 0.8,
     "BATCH_SIZE": 256,
     "MAX_LENGTH": 32,
+    "QA_MAX_SEQ_LEN": 512,
     
     "INTENT_OUTPUT_DIR": base_dir + f"{_}data{_}output{_}intent{_}",
     "ENTITY_OUTPUT_DIR": base_dir + f"{_}data{_}output{_}entity{_}",
+    "QUEST_OUTPUT_DIR": base_dir + f"{_}data{_}output{_}question_good_save{_}",
     "CONFIG": "config.json",
     "MODEL_FILE_NAME": f"{_}pytorch_model.bin",
     "DOMAIN_FILENAME": base_dir + f"{_}config{_}domain.json",
