@@ -24,8 +24,8 @@ class KorQuadDataset(Dataset):
         data = self.make_dataset(dataset)
         self.question = data[0]
         self.context = data[1]
-        self.answer_start = data[2]
-        self.answer_text = data[3]
+        self.answer_text = data[2]
+        self.answer_start = data[3]
         
     def make_dataset(self, dataset):
         context, question, answer_start, answer_text = [], [], [], []
@@ -34,35 +34,36 @@ class KorQuadDataset(Dataset):
             _, start = self.get_text(data['context'], start[0])
             context.append(data['context'])
             question.append(data['question'])
-            answer_start.append(start)
             answer_text.append(data['answers']['text'][0])
-        return question, context, answer_start, answer_text
+            answer_start.append(start)
+        
+        return question, context, answer_text, answer_start
+    
+    def get_text(self, context, start_loc):
+        contexts = context.split('. ')
+        len_text_answer_idx = -1
+        len_text = [0]
+        for idx, text in enumerate(contexts):
+            len_text.append(len_text[-1] + len(text)+2) # +2: "' "
+            # if len_text_answer_idx == -1 and start_loc < len_text[-1]:
+            #     len_text_answer_idx = idx - 1
+        len_text[-1] -= 2 # context의 마지막 문장이므로 -2
+
+        start, end = 0, len(len_text)-1 # index로 리스트 탐색하므로 -1
+        
+        while len_text[end] - len_text[start] > 160:
+            if (start_loc - len_text[start]) > (len_text[end] - start_loc):
+                start += 1
+            else:
+                end -= 1
+        answer_start = start_loc - len_text[start]
+        return context[len_text[start]:len_text[end]], answer_start
     
     def __getitem__(self, index):
         return self.question[index], self.context[index], self.answer_start[index], self.answer_text[index]
     
     def __len__(self):
         return len(self.question)
-    
-    def get_text(self, text, start_loc):
-        text_splited = text.split('. ')
-        len_text_answer_idx = -1
-        length_text = [0]
-
-        for idx, t in enumerate(text_splited):
-          length_text.append(length_text[-1]+len(t)+2)
-          
-          if len_text_answer_idx == -1 and start_loc < length_text[-1]:
-            len_text_answer_idx = idx-1
-        length_text[-1] -= 2
-
-        start, end = 0, len(length_text)-1
-        while length_text[end] - length_text[start] > 160:  
-            if start_loc - length_text[start] > length_text[end] - start_loc:
-              start += 1
-            else:
-              end -= 1
-        return text[length_text[start]:length_text[end]], start_loc - length_text[start]
 
 
 def custom_collate_fn(batch):
@@ -92,7 +93,7 @@ def custom_collate_fn(batch):
 
     for i, zipped in enumerate(zip(after_text, answer_tokens)):
         text, answer = zipped
-        padding_start = (tensorized_input['attention_mask'][i] == 1).nonzero()[-1].item()+1
+        padding_start = (tensorized_input['attention_mask'][i] == 1).nonzero()[-1].item() + 1
         tensorized_label_ones[i, padding_start-len(text): padding_start-len(text)+len(answer)] = 0
         tensorized_label_zero[i, padding_start-len(text): padding_start-len(text)+len(answer)] = 1
 
@@ -127,7 +128,7 @@ class CustomBertForQuestionAnswering(BertPreTrainedModel):
         return logits
 
 
-def validate(model, valid_dataloader, f1_fct, em_metric, acc_fct):
+def validate(model, valid_dataloader, f1_metric, em_metric, acc_metric):
     criterion = torch.nn.MSELoss()
     model.eval()
     model.to(device)
@@ -148,14 +149,13 @@ def validate(model, valid_dataloader, f1_fct, em_metric, acc_fct):
         em_value /= len(outputs)
         em = em_value
 
-        f1 = f1_fct.compute(predictions=outputs.view([-1, 1]).squeeze(), references=batch_label.view([-1, 1]).squeeze())['f1']
-        acc = acc_fct.compute(predictions=outputs.view([-1, 1]).squeeze(), references=batch_label.view([-1, 1]).squeeze())['accuracy']
+        f1 = f1_metric.compute(predictions=outputs.view([-1, 1]).squeeze(), references=batch_label.view([-1, 1]).squeeze())['f1']
+        acc = acc_metric.compute(predictions=outputs.view([-1, 1]).squeeze(), references=batch_label.view([-1, 1]).squeeze())['accuracy']
         
         total_loss += loss.item()
         total_f1 += f1
         total_em += em
         total_acc += acc
-        break
 
     total_loss = total_loss/(step+1)
     total_em = total_em/(step+1)
@@ -169,9 +169,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--output_dir', type=str, default="data/output/question/")
     parser.add_argument('--model_name', type=str, default="klue/bert-base")
-    parser.add_argument("--num_epochs", type=int, default=3)
+    parser.add_argument("--num_epochs", type=int, default=1)
     parser.add_argument("--train_batch_size", type=int, default=4)
-    parser.add_argument("--valid_batch_size", type=int, default=2)
+    parser.add_argument("--valid_batch_size", type=int, default=8)
     parser.add_argument("--learning_rate", type=float, default=2e-5) # 5e-3
     parser.add_argument("--max_seq_len", type=int, default=512)
     parser.add_argument("--dropout_rate", type=float, default=0.1)
@@ -205,9 +205,7 @@ if __name__ == "__main__":
     config.max_length = args.max_seq_len
     model = CustomBertForQuestionAnswering(config).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate, eps=args.eps, weight_decay=args.weight_decay)
-    total_steps = len(train_dataloader) * args.num_epochs
-    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps = 0, num_training_steps = total_steps)
-    print(f"Total train steps with {args.num_epochs} epochs: {total_steps}")
+    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps = 0, num_training_steps = len(train_dataloader) * args.num_epochs)
     del train_dataset, valid_dataset, dataset
     gc.collect()
 
@@ -216,8 +214,8 @@ if __name__ == "__main__":
     writer = SummaryWriter(args.output_dir)
     criterion = torch.nn.MSELoss()
     em_metric = load_metric('exact_match')
-    f1_fct = load_metric('f1')
-    acc_fct = load_metric('accuracy')
+    f1_metric = load_metric('f1')
+    acc_metric = load_metric('accuracy')
 
     train_dict = {'loss' : [], 'f1' : []}
     valid_dict = {'loss' : [], 'f1' : [], 'em' : []}
@@ -249,8 +247,8 @@ if __name__ == "__main__":
             em_value /= len(outputs)
             em = em_value
 
-            f1 = f1_fct.compute(predictions=outputs.view([-1, 1]).squeeze(), references=batch_label.view([-1, 1]).squeeze(), average='macro')['f1']
-            accuracy = acc_fct.compute(predictions=outputs.view([-1, 1]).squeeze(), references=batch_label.view([-1, 1]).squeeze())['accuracy']
+            f1 = f1_metric.compute(predictions=outputs.view([-1, 1]).squeeze(), references=batch_label.view([-1, 1]).squeeze(), average='macro')['f1']
+            accuracy = acc_metric.compute(predictions=outputs.view([-1, 1]).squeeze(), references=batch_label.view([-1, 1]).squeeze())['accuracy']
 
             batch_em += em
             total_em += em
@@ -264,7 +262,6 @@ if __name__ == "__main__":
             if (step != 0 and step % 100 == 0):
                 print(f"epoch: {epoch}, step : {step}, train loss : {train_loss / batch_count:.4f}, f1-score : {train_f1 / batch_count:.4f}")    
                 train_loss, train_f1, batch_count = 0,0,0
-            break
 
         print(f"Epoch {epoch} total loss : {total_loss/step:.4f} total f1 : {total_f1/step:.4f}")
 
@@ -272,7 +269,7 @@ if __name__ == "__main__":
         train_dict['loss'].append(total_loss/(step))
         
         if valid_dataloader != None:
-            valid_loss, valid_em, valid_f1, valid_acc = validate(model, valid_dataloader, f1_fct, em_metric, acc_fct)
+            valid_loss, valid_em, valid_f1, valid_acc = validate(model, valid_dataloader, f1_metric, em_metric, acc_metric)
             print(f"Epoch {epoch} valid loss : {valid_loss:.4f} valid f1 : {valid_f1:.4f} valid em : {valid_em:.4f} valid accuracy : {valid_acc:.4f}")
 
         valid_dict['f1'].append(valid_f1)
