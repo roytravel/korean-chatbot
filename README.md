@@ -1,5 +1,5 @@
 # Korean Chatbot
-This Korean chatbot is a task-oriented Korean dialogue system. it orients a multi-turn and an open vocabulary(ontology-free) dialogue system.
+Korean chatbot is a task-oriented dialogue system. it orients a multi-domain, multi-turn and a hybrid(ontology-free and pre-defined ontology) dialogue system.
 ![Goal Diagram](./docs/goal_diagram.png)
 
 ## Environment and Installation
@@ -9,7 +9,7 @@ This Korean chatbot is a task-oriented Korean dialogue system. it orients a mult
 - pip install -r requirements.txt
 
 ## Model Training
-Run following two scripts to fine-tune the model.
+Run following three scripts to fine-tune the model.
 ```
     python train_intent.py
     python train_entity.py
@@ -35,4 +35,4 @@ Run following script to run both server and client.
     python server.py
     python client.py
 ```
-if you want to do a test, then you can type `http://127.0.0.1:4999/?query=오늘 날씨 알려줘`. after typing this, you can hear a voice and get information that is made by a bot. So far only the weather function is working.
+if you want to do a test, then you can type `http://127.0.0.1:4999/?query=오늘 날씨 알려줘`. after typing this, you can hear a voice and get information that is made by a bot. so far only the weather function is working.
