@@ -1,30 +1,18 @@
 import gc
-import random
+import json
+import argparse
 import torch
 import torch.nn as nn
-import argparse
-import json
 import pandas as pd
-import zipfile
-import torch
 from glob import glob
-from transformers import AutoTokenizer, BertModel, BertConfig, get_linear_schedule_with_warmup
+from tqdm import tqdm
+from transformers import AutoTokenizer, BertModel, get_linear_schedule_with_warmup
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.tensorboard import SummaryWriter
+
 from utils.ealry_stopping import EarlyStopping
 from utils.decorators import data
-from tqdm import tqdm
 torch.cuda.empty_cache()
-
-class Bert(nn.Module):
-    def __init__(self):
-        super(Bert, self).__init__()
-        self.model = BertModel.from_pretrained("bert-base-multilingual-cased")
-        
-    def forward(self, src, segments, mask):
-        encoded_layers, _ = self.model(src, segments, mask)
-        top_vector = encoded_layers[-1]
-        return top_vector
 
 
 class SimpleClassifier(nn.Module):
@@ -43,17 +31,8 @@ class SimpleClassifier(nn.Module):
 class BertForExtSum(nn.Module):
     def __init__(self):
         super(BertForExtSum, self).__init__()
-        # self.bert = Bert()
         self.bert = BertModel.from_pretrained(self.MODEL_NAME)
         self.encoder = SimpleClassifier(self.bert.config.hidden_size)
-        
-        # if args.param_init != 0.0:
-        #     for p in self.encoder.parameters():
-        #         p.data.uniform_(-args.param_init, args.param_init)
-        # if args.param_init_glorot:
-        #     for p in self.encoder.parameters():
-        #         if p.dim() > 1:
-        #             torch.nn.init.xavier_uniform_(p)
 
     def forward(self, src, segments, clss):
         """
@@ -73,6 +52,7 @@ class BertForExtSum(nn.Module):
         
         sentences_scores = self.encoder(sentences_vector, mask_cls).squeeze(-1)
         return sentences_scores, mask_cls
+
 
 @data
 class CreateDataset:
@@ -107,7 +87,7 @@ class CreateDataset:
         df.columns = ["category", "title", "article", "abstractive", "extractive", "char_count"]
         df.to_csv(f"data/summary/{prefix}.csv", encoding="utf-8-sig")
         return df
-        
+
 
 @data
 class SummaryDataset(Dataset):
@@ -187,13 +167,13 @@ if __name__ == "__main__":
     if torch.cuda.device_count() > 0:
         torch.cuda.manual_seed_all(args.seed)
     
-    # 2. 데이터셋 생성 & 데이터로더
+    # 2. 데이터셋 생성 & 데이터 로더
     train_df = CreateDataset().format_json_to_df("train")
     valid_df = CreateDataset().format_json_to_df("valid")
     train_dataset = SummaryDataset(train_df)
     valid_dataset = SummaryDataset(valid_df)
     train_dataloader = DataLoader(dataset=train_dataset, shuffle=True, batch_size=args.batch_size, num_workers=0)
-    valid_dataloader = DataLoader(dataset=valid_dataset, shuffle=False, batch_sampler=args.batch_size, num_workers=0)
+    valid_dataloader = DataLoader(dataset=valid_dataset, shuffle=False, batch_size=args.batch_size, num_workers=0)
     del train_df, valid_df, train_dataset, valid_dataset
     gc.collect()
 
@@ -232,10 +212,9 @@ if __name__ == "__main__":
         train_accuracy = round((correct/count), 4)
         avg_train_loss = round(train_loss / len(train_dataloader), 4)
         
-        
         model.eval()
         valid_loss, correct, count = 0, 0, 0
-        for valid_idx, batch in enumerate(valid_dataloader):
+        for valid_idx, batch in enumerate(tqdm(valid_dataloader)):
             src = batch['src'].to(device)
             segments = batch['segments'].to(device)
             clss = batch['clss'].to(device)
@@ -244,6 +223,7 @@ if __name__ == "__main__":
                 sentences_scores, mask_cls = model(src, segments, clss)
             loss = criterion(sentences_scores, labels)
             loss = (loss * mask_cls.float().sum() / len(labels))
+            WS.add_scalar("loss/valid", loss, epoch)
             valid_loss += loss.item()
             _, preds = torch.max(sentences_scores, dim=1)
             count += labels.size(1)
@@ -256,7 +236,5 @@ if __name__ == "__main__":
             break
     
     # 6. 모델 저장
-    model.save_pretrained(args.output_dir)
-    model_to_save = model.module if hasattr(model, 'module') else model
-    model_to_save.save_pretrained(args.output_dir)
+    torch.save(model.state_dict(), args.output_dir + "pytorch_model.bin")
     WS.close()
