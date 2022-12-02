@@ -14,6 +14,7 @@ Run following three scripts to fine-tune the model.
 >>> python train_intent.py
 >>> python train_entity.py
 >>> python train_question.py
+>>> python train_summary.py
 ```
 if you run a script, then it makes fine-tuned model. BERT model is used to train an intent classification, entity recognition model and question answering model for now. other model will be updated.
 
@@ -27,6 +28,7 @@ if you want to do inference, then you can run the following script. import Predi
 >>> intent = P.predict_intent(sentence)
 >>> entity = P.predict_entity(sentence)
 >>> answer = P.predict_question(context, query)
+>>> sents = P.predict_summary(sentences)
 ```
 
 ## Server and Client
