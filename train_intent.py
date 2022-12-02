@@ -4,10 +4,9 @@ import argparse
 import torch
 from torch.utils.tensorboard import SummaryWriter
 from transformers import get_linear_schedule_with_warmup
-from glob import glob
 from tqdm import tqdm
 from utils.data import Dataset
-from model.model import BertForSequenceClassification
+from model import BertForSequenceClassification
 from utils.ealry_stopping import EarlyStopping
 
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"

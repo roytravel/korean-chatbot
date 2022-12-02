@@ -4,16 +4,16 @@ import gc
 import argparse
 import numpy as np
 import torch
-import torch.nn as nn
 import warnings
 warnings.filterwarnings(action='ignore')
 from datasets import load_dataset, load_metric
-from transformers import AutoTokenizer, BertPreTrainedModel, BertModel, BertConfig, get_linear_schedule_with_warmup
+from transformers import AutoTokenizer, BertConfig, get_linear_schedule_with_warmup
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 from torch.utils.data import Dataset
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 from utils.ealry_stopping import EarlyStopping
+from model import CustomBertForQuestionAnswering
 
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -108,25 +108,6 @@ def make_dataloader(dataset, batch_size: int, signature='train') -> DataLoader:
     sampler = RandomSampler(dataset) if signature == 'train' else SequentialSampler(dataset)
     dataloader = DataLoader(dataset, batch_size, sampler = sampler, collate_fn = custom_collate_fn)
     return dataloader
-
-
-class CustomBertForQuestionAnswering(BertPreTrainedModel):
-    def __init__(self, config):
-        super().__init__(config)
-        self.labels_type = [0, 1]
-        self.num_labels = len(self.labels_type)
-        self.bert = BertModel(config, add_pooling_layer=False)
-        self.qa_output = nn.Sequential(nn.Linear(config.hidden_size, config.hidden_size),
-                                      nn.GELU(),
-                                      nn.Linear(config.hidden_size, 128),
-                                      nn.GELU(),
-                                      nn.Linear(128, self.num_labels))
-        # self.dropout = nn.Dropout(config.dripout_rate)
-
-    def forward(self, input_ids=None, attention_mask=None, token_type_ids=None):
-        outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)['last_hidden_state']
-        logits = self.qa_output(outputs)
-        return logits
 
 
 def validate(model, valid_dataloader, f1_metric, em_metric, acc_metric):
