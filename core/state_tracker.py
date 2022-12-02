@@ -2,7 +2,7 @@ import os
 import sys
 import json
 from typing import List, Tuple, Any, Text, Dict, Optional
-from utils.decorators import data
+from utils.decorators import hyperparameter
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 
 class Domain:
@@ -24,7 +24,7 @@ class Domain:
         with open(filename, mode="rt", encoding="utf-8") as f:
             return json.load(f)
     
-@data
+@hyperparameter
 class DialogueStateTracker(Domain):
     def __init__(self):
         domain = Domain.load_file(self.DOMAIN_FILENAME)

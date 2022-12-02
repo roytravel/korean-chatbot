@@ -4,10 +4,10 @@ from torch import Tensor
 from torch.utils.data import DataLoader
 from typing import Tuple, List
 
-from utils.decorators import data
+from utils.decorators import hyperparameter
 from utils.data.tokenizer import AutoTokenizer
 
-@data
+@hyperparameter
 class Dataset:
     def __init__(self):
         self.tokenizer = AutoTokenizer.from_pretrained(self.MODEL_NAME)
